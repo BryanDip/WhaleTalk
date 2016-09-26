@@ -7,17 +7,58 @@
 //
 
 import UIKit
+import CoreData
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
 
+    private var contactImporter: ContactImporter?
+    
+    private var contactsSyncer: Syncer?
+    
+    private var contactsUploadSyncer: Syncer?
 
     func application(application: UIApplication, didFinishLaunchingWithOptions launchOptions: [NSObject: AnyObject]?) -> Bool {
         // Override point for customization after application launch.
+        
+        let mainContext = NSManagedObjectContext(concurrencyType: .MainQueueConcurrencyType)
+        mainContext.persistentStoreCoordinator = CDHelper.sharedInstance.coordinator
+        
+        let contactsContext = NSManagedObjectContext(concurrencyType: .PrivateQueueConcurrencyType)
+        contactsContext.persistentStoreCoordinator = CDHelper.sharedInstance.coordinator
+
+        contactsSyncer = Syncer(mainContext: mainContext, backgroundContext: contactsContext)
+        
+        contactImporter = ContactImporter(context: contactsContext)
+        importContacts(contactsContext)
+        
+        let tabController = UITabBarController()
+        let vcData: [(UIViewController, UIImage, String)] = [
+            (FavoritesViewController(), UIImage(named: "favorites_icon")!, "Favorites"),
+            (ContactsViewController(), UIImage(named: "contact_icon")!, "Contacts"),
+            (AllChatsViewController(), UIImage(named: "chat_icon")!, "Chats")]
+        let vcs = vcData.map {
+            (vc: UIViewController, image: UIImage, title: String) -> UINavigationController in
+            if var vc = vc as? ContextViewController {
+                vc.context = mainContext
+            }
+            let nav = UINavigationController(rootViewController: vc)
+            nav.tabBarItem.image = image
+            nav.title = title
+            return nav
+        }
+        
+        tabController.viewControllers = vcs
+        
+        window?.rootViewController = tabController
+
+        contactImporter?.listenForChanges()
+        
         return true
     }
+    
 
     func applicationWillResignActive(application: UIApplication) {
         // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.
@@ -41,6 +82,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
     }
 
+    
+    // FAKE DATA
+    func importContacts(context: NSManagedObjectContext) {
+        let dataSeeded = NSUserDefaults.standardUserDefaults().boolForKey("dataSeeded")
+        guard !dataSeeded else {return}
+
+        contactImporter?.fetch()
+        
+        NSUserDefaults.standardUserDefaults().setObject(true, forKey: "dataSeeded")
+    }
+    
 
 }
 
