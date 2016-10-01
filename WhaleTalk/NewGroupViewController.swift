@@ -15,8 +15,8 @@ class NewGroupViewController: UIViewController {
     var context: NSManagedObjectContext?
     var chatCreationDelegate: ChatCreationDelegate?
     
-    private let subjectField = UITextField()
-    private let characterNumberLabel = UILabel()
+    fileprivate let subjectField = UITextField()
+    fileprivate let characterNumberLabel = UILabel()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -24,10 +24,10 @@ class NewGroupViewController: UIViewController {
         
         title = "New Group"
     
-        view.backgroundColor = UIColor.whiteColor()
+        view.backgroundColor = UIColor.white
         
-        navigationItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .Cancel, target: self, action: "cancel")
-        navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Next", style: .Plain, target: self, action: "next")
+        navigationItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .cancel, target: self, action: #selector(NewGroupViewController.cancel))
+        navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Next", style: .plain, target: self, action: #selector(NewGroupViewController.next as (NewGroupViewController) -> () -> ()))
         updateNextButton(forCharCount: 0)
         
         subjectField.placeholder = "Group Subject"
@@ -37,27 +37,27 @@ class NewGroupViewController: UIViewController {
         
         updateCharacterLabel(forCharCount: 0)
         
-        characterNumberLabel.textColor = UIColor.lightGrayColor()
+        characterNumberLabel.textColor = UIColor.lightGray
         characterNumberLabel.translatesAutoresizingMaskIntoConstraints = false
         subjectField.addSubview(characterNumberLabel)
         
         let bottomBorder = UIView()
-        bottomBorder.backgroundColor = UIColor.lightGrayColor()
+        bottomBorder.backgroundColor = UIColor.lightGray
         bottomBorder.translatesAutoresizingMaskIntoConstraints = false
         subjectField.addSubview(bottomBorder)
         
         let constraints: [NSLayoutConstraint] = [
-            subjectField.topAnchor.constraintEqualToAnchor(topLayoutGuide.bottomAnchor, constant: 20),
-            subjectField.leadingAnchor.constraintEqualToAnchor(view.layoutMarginsGuide.leadingAnchor),
-            subjectField.trailingAnchor.constraintEqualToAnchor(view.trailingAnchor),
-            bottomBorder.widthAnchor.constraintEqualToAnchor(subjectField.widthAnchor),
-            bottomBorder.bottomAnchor.constraintEqualToAnchor(subjectField.bottomAnchor),
-            bottomBorder.leadingAnchor.constraintEqualToAnchor(subjectField.leadingAnchor),
-            bottomBorder.heightAnchor.constraintEqualToConstant(1),
-            characterNumberLabel.centerYAnchor.constraintEqualToAnchor(subjectField.centerYAnchor),
-            characterNumberLabel.trailingAnchor.constraintEqualToAnchor(subjectField.layoutMarginsGuide.trailingAnchor)
+            subjectField.topAnchor.constraint(equalTo: topLayoutGuide.bottomAnchor, constant: 20),
+            subjectField.leadingAnchor.constraint(equalTo: view.layoutMarginsGuide.leadingAnchor),
+            subjectField.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            bottomBorder.widthAnchor.constraint(equalTo: subjectField.widthAnchor),
+            bottomBorder.bottomAnchor.constraint(equalTo: subjectField.bottomAnchor),
+            bottomBorder.leadingAnchor.constraint(equalTo: subjectField.leadingAnchor),
+            bottomBorder.heightAnchor.constraint(equalToConstant: 1),
+            characterNumberLabel.centerYAnchor.constraint(equalTo: subjectField.centerYAnchor),
+            characterNumberLabel.trailingAnchor.constraint(equalTo: subjectField.layoutMarginsGuide.trailingAnchor)
         ]
-        NSLayoutConstraint.activateConstraints(constraints)
+        NSLayoutConstraint.activate(constraints)
     }
     
 
@@ -68,12 +68,12 @@ class NewGroupViewController: UIViewController {
 
     
     func cancel() {
-        dismissViewControllerAnimated(true, completion: nil)
+        dismiss(animated: true, completion: nil)
     }
     
     
     func next() {
-        guard let context = context, chat = NSEntityDescription.insertNewObjectForEntityForName("Chat", inManagedObjectContext: context) as? Chat else {return}
+        guard let context = context, let chat = NSEntityDescription.insertNewObject(forEntityName: "Chat", into: context) as? Chat else {return}
         chat.name = subjectField.text
         
         let vc = NewGroupParticipantsViewController()
@@ -92,11 +92,11 @@ class NewGroupViewController: UIViewController {
     
     func updateNextButton(forCharCount length:Int) {
         if length == 0 {
-            navigationItem.rightBarButtonItem?.tintColor = UIColor.lightGrayColor()
-            navigationItem.rightBarButtonItem?.enabled = false
+            navigationItem.rightBarButtonItem?.tintColor = UIColor.lightGray
+            navigationItem.rightBarButtonItem?.isEnabled = false
         } else {
             navigationItem.rightBarButtonItem?.tintColor = view.tintColor
-            navigationItem.rightBarButtonItem?.enabled = true
+            navigationItem.rightBarButtonItem?.isEnabled = true
         }
     }
 
@@ -104,7 +104,7 @@ class NewGroupViewController: UIViewController {
 
 extension NewGroupViewController: UITextFieldDelegate {
     
-    func textField(textField: UITextField, shouldChangeCharactersInRange range: NSRange, replacementString string: String) -> Bool {
+    func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
         
         let currentCharacterCount = textField.text?.characters.count ?? 0
         let newLength = currentCharacterCount + string.characters.count - range.length

@@ -8,6 +8,26 @@
 
 import Foundation
 import CoreData
+fileprivate func < <T : Comparable>(lhs: T?, rhs: T?) -> Bool {
+  switch (lhs, rhs) {
+  case let (l?, r?):
+    return l < r
+  case (nil, _?):
+    return true
+  default:
+    return false
+  }
+}
+
+fileprivate func > <T : Comparable>(lhs: T?, rhs: T?) -> Bool {
+  switch (lhs, rhs) {
+  case let (l?, r?):
+    return l > r
+  default:
+    return rhs < lhs
+  }
+}
+
 
 
 class Chat: NSManagedObject {
@@ -19,12 +39,12 @@ class Chat: NSManagedObject {
     }
     
     var lastMessage: Message? {
-        let request = NSFetchRequest(entityName: "Message")
+        let request: NSFetchRequest<NSFetchRequestResult> = Message.fetchRequest()
         request.predicate = NSPredicate(format: "chat = %@", self)
         request.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: false)]
         request.fetchLimit = 1
         do {
-            guard let results = try self.managedObjectContext?.executeFetchRequest(request) as? [Message] else {return nil}
+            guard let results = try self.managedObjectContext?.fetch(request) as? [Message] else {return nil}
             return results.first
         }
         catch {
@@ -35,16 +55,16 @@ class Chat: NSManagedObject {
     
     
     func add(participant contact: Contact) {
-        mutableSetValueForKey("participants").addObject(contact)
+        mutableSetValue(forKey: "participants").add(contact)
     }
     
     
     static func existing(directWith contact: Contact, inContext context: NSManagedObjectContext) -> Chat? {
         
-        let request = NSFetchRequest(entityName: "Chat")
+        let request: NSFetchRequest<NSFetchRequestResult> = Chat.fetchRequest()
         request.predicate = NSPredicate(format: "ANY participants = %@ AND participants.@count = 1", contact)
         do {
-            guard let results = try context.executeFetchRequest(request) as? [Chat] else {return nil}
+            guard let results = try context.fetch(request) as? [Chat] else {return nil}
             return results.first
         } catch {
             print("Error Fetching")
@@ -54,7 +74,7 @@ class Chat: NSManagedObject {
     
     
     static func new(directWith contact: Contact, inContext context: NSManagedObjectContext) -> Chat {
-        let chat = NSEntityDescription.insertNewObjectForEntityForName("Chat", inManagedObjectContext: context) as! Chat
+        let chat = NSEntityDescription.insertNewObject(forEntityName: "Chat", into: context) as! Chat
         chat.add(participant: contact)
         return chat
     }

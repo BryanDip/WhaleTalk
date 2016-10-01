@@ -12,38 +12,39 @@ import CoreData
 class ChatViewController: UIViewController {
 
     
-    private let tableView = UITableView(frame: CGRectZero, style: .Grouped)
-    private let newMessageField = UITextView()
+    fileprivate let tableView = UITableView(frame: CGRect.zero, style: .grouped)
+    fileprivate let newMessageField = UITextView()
     
-    private var sections = [NSDate:[Message]]()
-    private var dates = [NSDate]()
+    fileprivate var sections = [Date:[Message]]()
+    fileprivate var dates = [Date]()
     
-    private var bottomConstraint: NSLayoutConstraint!
+    fileprivate var bottomConstraint: NSLayoutConstraint!
     
-    private let cellIdentifier = "Cell"
+    fileprivate let cellIdentifier = "Cell"
     
     var context: NSManagedObjectContext?
     
     var chat: Chat?
     
-    private enum Error: ErrorType {
-        case NoChat
-        case NoContext
+    fileprivate enum Errors: Error {
+        case noChat
+        case noContext
     }
     
     
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
+        title = "NAMEE"
         
         do {
-            guard let chat = chat else {throw Error.NoChat}
-            guard let context = context else {throw Error.NoContext}
+            guard chat != nil else {throw Errors.noChat}
+            guard let context = context else {throw Errors.noContext}
             
-            let request = NSFetchRequest(entityName: "Message")
-            request.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: true)]
-            //request.predicate = NSPredicate(format: "chat = %@", chat)
-            if let result = try context.executeFetchRequest(request) as? [Message] {
+            let request: NSFetchRequest<NSFetchRequestResult> = Message.fetchRequest()
+            request.predicate = NSPredicate(format: "chat = %@", chat!)
+            request.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: false)]
+            if let result = try context.fetch(request) as? [Message] {
                 for message in result {
                     addMessage(message)
                 }
@@ -57,44 +58,44 @@ class ChatViewController: UIViewController {
         // ADD MESSAGE AREA/FIELD AND CONSTRAINTS
         let newMessageArea = UIView()
         
-        newMessageArea.backgroundColor = UIColor.grayColor()
+        newMessageArea.backgroundColor = UIColor.gray
         newMessageArea.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(newMessageArea)
         
         newMessageField.translatesAutoresizingMaskIntoConstraints = false
         newMessageArea.addSubview(newMessageField)
         
-        newMessageField.scrollEnabled = false
+        newMessageField.isScrollEnabled = false
         
         let sendButton = UIButton()
         sendButton.translatesAutoresizingMaskIntoConstraints = false
         newMessageArea.addSubview(sendButton)
         
-        sendButton.setTitle("Send", forState: UIControlState.Normal)
-        sendButton.addTarget(self, action: Selector("pressedSend:"), forControlEvents: UIControlEvents.TouchUpInside)
+        sendButton.setTitle("Send", for: UIControlState())
+        sendButton.addTarget(self, action: #selector(ChatViewController.pressedSend(_:)), for: UIControlEvents.touchUpInside)
         
         
         // STOP BUTTON ENLARGING
-        sendButton.setContentHuggingPriority(251, forAxis: UILayoutConstraintAxis.Horizontal)
+        sendButton.setContentHuggingPriority(251, for: UILayoutConstraintAxis.horizontal)
         
         
         // STOP BUTTON SQUISH
-        sendButton.setContentCompressionResistancePriority(751, forAxis: UILayoutConstraintAxis.Horizontal)
+        sendButton.setContentCompressionResistancePriority(751, for: UILayoutConstraintAxis.horizontal)
         
-        bottomConstraint = newMessageArea.bottomAnchor.constraintEqualToAnchor(view.bottomAnchor)
-        bottomConstraint.active = true
+        bottomConstraint = newMessageArea.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        bottomConstraint.isActive = true
         
         let messageAreaConstraints: [NSLayoutConstraint] = [
-            newMessageArea.leadingAnchor.constraintEqualToAnchor(view.leadingAnchor),
-            newMessageArea.trailingAnchor.constraintEqualToAnchor(view.trailingAnchor),
-            newMessageField.leadingAnchor.constraintEqualToAnchor(newMessageArea.leadingAnchor,constant:10),
-            newMessageField.centerYAnchor.constraintEqualToAnchor(newMessageArea.centerYAnchor),
-            sendButton.trailingAnchor.constraintEqualToAnchor(newMessageArea.trailingAnchor, constant:-10),
-            newMessageField.trailingAnchor.constraintEqualToAnchor(sendButton.leadingAnchor,constant: -10),
-            sendButton.centerYAnchor.constraintEqualToAnchor(newMessageField.centerYAnchor),
-            newMessageArea.heightAnchor.constraintEqualToAnchor(newMessageField.heightAnchor, constant:20)
+            newMessageArea.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            newMessageArea.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            newMessageField.leadingAnchor.constraint(equalTo: newMessageArea.leadingAnchor,constant:10),
+            newMessageField.centerYAnchor.constraint(equalTo: newMessageArea.centerYAnchor),
+            sendButton.trailingAnchor.constraint(equalTo: newMessageArea.trailingAnchor, constant:-10),
+            newMessageField.trailingAnchor.constraint(equalTo: sendButton.leadingAnchor,constant: -10),
+            sendButton.centerYAnchor.constraint(equalTo: newMessageField.centerYAnchor),
+            newMessageArea.heightAnchor.constraint(equalTo: newMessageField.heightAnchor, constant:20)
         ]
-        NSLayoutConstraint.activateConstraints(messageAreaConstraints)
+        NSLayoutConstraint.activate(messageAreaConstraints)
         
         
         // AUTO LAYOUT
@@ -102,7 +103,7 @@ class ChatViewController: UIViewController {
         view.addSubview(tableView)
         
         // REGISTER CHAT CELL
-        tableView.registerClass(MessageCell.self, forCellReuseIdentifier: cellIdentifier)
+        tableView.register(MessageCell.self, forCellReuseIdentifier: cellIdentifier)
         
         
         // CONFORM TO PROTOCOL UITABLEVIEWCELLDATASOURCE & DELEGATE
@@ -114,42 +115,42 @@ class ChatViewController: UIViewController {
         tableView.estimatedRowHeight = 44
         
         tableView.backgroundView = UIImageView(image: UIImage(named: "MessageBubble"))
-        tableView.separatorColor = UIColor.clearColor()
+        tableView.separatorColor = UIColor.clear
         tableView.sectionHeaderHeight = UITableViewAutomaticDimension
         tableView.estimatedSectionHeaderHeight = 25
         
         let tableViewConstraints: [NSLayoutConstraint] = [
         
-            tableView.topAnchor.constraintEqualToAnchor(topLayoutGuide.bottomAnchor),
-            tableView.leadingAnchor.constraintEqualToAnchor(view.leadingAnchor),
-            tableView.bottomAnchor.constraintEqualToAnchor(newMessageArea.topAnchor),
-            tableView.trailingAnchor.constraintEqualToAnchor(view.trailingAnchor)
+            tableView.topAnchor.constraint(equalTo: topLayoutGuide.bottomAnchor),
+            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            tableView.bottomAnchor.constraint(equalTo: newMessageArea.topAnchor),
+            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
         ]
         
-        NSLayoutConstraint.activateConstraints(tableViewConstraints)
+        NSLayoutConstraint.activate(tableViewConstraints)
         
         
         // ADDING NSNOTIFICATION LISTENER FOR KEYBOARD
-        NSNotificationCenter.defaultCenter().addObserver(self, selector: Selector("keyboardWillShow:"), name: UIKeyboardWillShowNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(ChatViewController.keyboardWillShow(_:)), name: NSNotification.Name.UIKeyboardWillShow, object: nil)
         
         
         // DROP NEW MESSAGE FIELD WHEN KEYBOARD IS HIDDEN
-        NSNotificationCenter.defaultCenter().addObserver(self, selector: Selector("keyboardWillHide:"), name: UIKeyboardWillHideNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(ChatViewController.keyboardWillHide(_:)), name: NSNotification.Name.UIKeyboardWillHide, object: nil)
         
         
-        if let mainContext = context?.parentContext ?? context {
-            NSNotificationCenter.defaultCenter().addObserver(self, selector: Selector("contextUpdated:"), name: NSManagedObjectContextObjectsDidChangeNotification, object: mainContext)
+        if let mainContext = context?.parent ?? context {
+            NotificationCenter.default.addObserver(self, selector: #selector(ChatViewController.contextUpdated(_:)), name: NSNotification.Name.NSManagedObjectContextObjectsDidChange, object: mainContext)
         }
         
         
         // ADD UITAPGESTURERECOGNIZER
-        let tapRecognizer = UITapGestureRecognizer(target: self, action: "handleSingleTap:")
+        let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(ChatViewController.handleSingleTap(_:)))
         view.addGestureRecognizer(tapRecognizer)
 
     }
     
     
-    override func viewDidAppear(animated: Bool) {
+    override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(true)
         tableView.scrollToBottom()
     }
@@ -161,28 +162,28 @@ class ChatViewController: UIViewController {
     }
     
     
-    func keyboardWillShow(notification: NSNotification) {
+    func keyboardWillShow(_ notification: Notification) {
         updateBottomConstraint(notification)
     }
     
-    func keyboardWillHide(notification: NSNotification) {
+    func keyboardWillHide(_ notification: Notification) {
         updateBottomConstraint(notification)
     }
     
     
-    func handleSingleTap(recognizer: UITapGestureRecognizer) {
+    func handleSingleTap(_ recognizer: UITapGestureRecognizer) {
         view.endEditing(true)
     }
     
     
-    func updateBottomConstraint(notification: NSNotification) {
+    func updateBottomConstraint(_ notification: Notification) {
         if let
-            userInfo = notification.userInfo,
-            frame = userInfo[UIKeyboardFrameEndUserInfoKey]?.CGRectValue,
-            animationDuration = userInfo[UIKeyboardAnimationDurationUserInfoKey]?.doubleValue{
-            let newFrame = view.convertRect(frame, fromView: (UIApplication.sharedApplication().delegate?.window)!)
-            bottomConstraint.constant = newFrame.origin.y - CGRectGetHeight(view.frame)
-            UIView.animateWithDuration(animationDuration, animations: {
+            userInfo = (notification as NSNotification).userInfo,
+            let frame = (userInfo[UIKeyboardFrameEndUserInfoKey] as AnyObject).cgRectValue,
+            let animationDuration = (userInfo[UIKeyboardAnimationDurationUserInfoKey] as AnyObject).doubleValue{
+            let newFrame = view.convert(frame, from: (UIApplication.shared.delegate?.window)!)
+            bottomConstraint.constant = newFrame.origin.y - view.frame.height
+            UIView.animate(withDuration: animationDuration, animations: {
                 self.view.layoutIfNeeded()
             })
             tableView.scrollToBottom()
@@ -191,13 +192,13 @@ class ChatViewController: UIViewController {
     
     
     
-    func pressedSend(button: UIButton) {
-        guard let text = newMessageField.text where text.characters.count > 0 else {return}
+    func pressedSend(_ button: UIButton) {
+        guard let text = newMessageField.text , text.characters.count > 0 else {return}
         checkTemporaryContext()
         guard let context = context else {return}
-        guard let message = NSEntityDescription.insertNewObjectForEntityForName("Message", inManagedObjectContext: context) as? Message else{return}
+        guard let message = NSEntityDescription.insertNewObject(forEntityName: "Message", into: context) as? Message else {return}
         message.text = text
-        message.timestamp = NSDate()
+        message.timestamp = Date()
         message.chat = chat
         chat?.lastMessageTime = message.timestamp
         do {
@@ -213,25 +214,25 @@ class ChatViewController: UIViewController {
     }
     
     
-    func addMessage(message: Message) {
+    func addMessage(_ message: Message) {
         guard let date = message.timestamp else {return}
-        let calendar = NSCalendar.currentCalendar()
-        let startDay = calendar.startOfDayForDate(date)
+        let calendar = Calendar.current
+        let startDay = calendar.startOfDay(for: date as Date)
         
         var messages = sections[startDay]
         if messages == nil {
             dates.append(startDay)
-            dates = dates.sort({$0.earlierDate($1) == $0})
+            dates = dates.sorted(by: {($0 as NSDate).earlierDate($1) == $0})
             messages = [Message]()
         }
         messages!.append(message)
-        messages?.sortInPlace{$0.timestamp!.earlierDate($1.timestamp!) == $0.timestamp!}
+        messages?.sort{($0.timestamp! as NSDate).earlierDate($1.timestamp! as Date) == $0.timestamp! as Date}
         sections[startDay] = messages
     }
     
     
-    func contextUpdated(notification: NSNotification) {
-        guard let set = (notification.userInfo![NSInsertedObjectsKey] as? NSSet) else {return}
+    func contextUpdated(_ notification: Notification) {
+        guard let set = ((notification as NSNotification).userInfo![NSInsertedObjectsKey] as? NSSet) else {return}
         let objects = set.allObjects
         for obj in objects {
             guard let message = obj as? Message else {continue}
@@ -245,7 +246,7 @@ class ChatViewController: UIViewController {
     
     
     func checkTemporaryContext() {
-        if let mainContext = context?.parentContext, chat = chat {
+        if let mainContext = context?.parent, let chat = chat {
             let tempContext = context
             context = mainContext
             do {
@@ -253,13 +254,13 @@ class ChatViewController: UIViewController {
             } catch {
                 print("Error saving tempContext")
             }
-            self.chat = mainContext.objectWithID(chat.objectID) as? Chat
+            self.chat = mainContext.object(with: chat.objectID) as? Chat
         }
     }
     
     
     deinit {
-        NSNotificationCenter.defaultCenter().removeObserver(self)
+        NotificationCenter.default.removeObserver(self)
     }
 }
 
@@ -267,44 +268,45 @@ class ChatViewController: UIViewController {
 extension ChatViewController: UITableViewDataSource {
     
     
-    func getMessages(section: Int)->[Message]{
+    func getMessages(_ section: Int)->[Message]{
         let date = dates[section]
         return sections[date]!
     }
     
     
     
-    func numberOfSectionsInTableView(tableView: UITableView) -> Int {
+    func numberOfSections(in tableView: UITableView) -> Int {
         return dates.count
     }
     
     
-    func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         
         return getMessages(section).count
     }
     
     
-    func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
-        let cell = tableView.dequeueReusableCellWithIdentifier(cellIdentifier, forIndexPath: indexPath) as! MessageCell
+        let cell = tableView.dequeueReusableCell(withIdentifier: cellIdentifier, for: indexPath) as! MessageCell
         cell.separatorInset = UIEdgeInsetsMake(0, tableView.bounds.size.width, 0, 0)
         
-        let messages = getMessages(indexPath.section)
-        let message = messages[indexPath.row]
+        let messages = getMessages((indexPath as NSIndexPath).section)
+        let message = messages[(indexPath as NSIndexPath).row]
         cell.messageLabel.text = message.text
         
         cell.incoming(message.isIncoming)
         
-        cell.backgroundColor = UIColor.clearColor()
+        cell.backgroundColor = UIColor.clear
         
         return cell
     }
 
     
-    func tableView(tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+    
+    private func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
         let view = UIView()
-        view.backgroundColor = UIColor.clearColor()
+        view.backgroundColor = UIColor.clear
         let paddingView = UIView()
         view.addSubview(paddingView)
         paddingView.translatesAutoresizingMaskIntoConstraints = false
@@ -313,19 +315,19 @@ extension ChatViewController: UITableViewDataSource {
         dateLabel.translatesAutoresizingMaskIntoConstraints = false
         
         let constraints:[NSLayoutConstraint] = [
-            paddingView.centerXAnchor.constraintEqualToAnchor(view.centerXAnchor),
-            paddingView.centerYAnchor.constraintEqualToAnchor(view.centerYAnchor),
-            dateLabel.centerXAnchor.constraintEqualToAnchor(paddingView.centerXAnchor),
-            dateLabel.centerYAnchor.constraintEqualToAnchor(paddingView.centerYAnchor),
-            paddingView.heightAnchor.constraintEqualToAnchor(dateLabel.heightAnchor, constant: 5),
-            paddingView.widthAnchor.constraintEqualToAnchor(dateLabel.widthAnchor, constant: 10),
-            view.heightAnchor.constraintEqualToAnchor(paddingView.heightAnchor)
+            paddingView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            paddingView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            dateLabel.centerXAnchor.constraint(equalTo: paddingView.centerXAnchor),
+            dateLabel.centerYAnchor.constraint(equalTo: paddingView.centerYAnchor),
+            paddingView.heightAnchor.constraint(equalTo: dateLabel.heightAnchor, constant: 5),
+            paddingView.widthAnchor.constraint(equalTo: dateLabel.widthAnchor, constant: 10),
+            view.heightAnchor.constraint(equalTo: paddingView.heightAnchor)
         ]
-        NSLayoutConstraint.activateConstraints(constraints)
+        NSLayoutConstraint.activate(constraints)
         
-        let formatter = NSDateFormatter()
+        let formatter = DateFormatter()
         formatter.dateFormat = "MMM dd, YYYY"
-        dateLabel.text = formatter.stringFromDate(dates[section])
+        dateLabel.text = formatter.string(from: dates[section])
         
         paddingView.layer.cornerRadius = 10
         paddingView.layer.masksToBounds = true
@@ -335,12 +337,12 @@ extension ChatViewController: UITableViewDataSource {
     }
     
     
-    func tableView(tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
+    private func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
         return UIView()
     }
     
     
-    func tableView(tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
+    private func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
         return 0.01
     }
 }
@@ -349,7 +351,7 @@ extension ChatViewController: UITableViewDataSource {
 extension ChatViewController: UITableViewDelegate {
     
     // TURN OFF DEFAULT CELL HIGHLIGHTING
-    func tableView(tableView: UITableView, shouldHighlightRowAtIndexPath indexPath: NSIndexPath) -> Bool {
+    func tableView(_ tableView: UITableView, shouldHighlightRowAt indexPath: IndexPath) -> Bool {
         return false
     }
     

@@ -16,8 +16,8 @@ import Contacts
 
 class ContactImporter: NSObject {
     
-    private var context: NSManagedObjectContext
-    private var lastCNNotificationTime: NSDate?
+    fileprivate var context: NSManagedObjectContext
+    fileprivate var lastCNNotificationTime: Date?
     
     init(context: NSManagedObjectContext) {
         self.context = context
@@ -25,24 +25,26 @@ class ContactImporter: NSObject {
     
     
     func listenForChanges() {
-        CNContactStore.authorizationStatusForEntityType(.Contacts)
+        CNContactStore.authorizationStatus(for: .contacts)
         
-        NSNotificationCenter.defaultCenter().addObserver(self, selector: "addressBookDidChange:", name: CNContactStoreDidChangeNotification, object: nil)
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(ContactImporter.addressBookDidChange(_:)), name: NSNotification.Name.CNContactStoreDidChange, object: nil)
     }
     
     
-    func addressBookDidChange(notification: NSNotification) {
-        let now = NSDate()
+    func addressBookDidChange(_ notification: Notification) {
+        let now = Date()
         
-        guard lastCNNotificationTime == nil || now.timeIntervalSinceDate(lastCNNotificationTime!) > 1 else {return}
+        guard lastCNNotificationTime == nil || now.timeIntervalSince(lastCNNotificationTime!) > 1 else {return}
         lastCNNotificationTime = now
         
-        fetchExisting()
+        fetch()
+        //fetchExisting()
     }
     
     
-    func formatPhoneNumber(number: CNPhoneNumber) -> String {
-        return number.stringValue.stringByReplacingOccurrencesOfString(" ", withString: "").stringByReplacingOccurrencesOfString("-", withString: "").stringByReplacingOccurrencesOfString("(", withString: "").stringByReplacingOccurrencesOfString(")", withString: "")
+    func formatPhoneNumber(_ number: CNPhoneNumber) -> String {
+        return number.stringValue.replacingOccurrences(of: " ", with: "").replacingOccurrences(of: "-", with: "").replacingOccurrences(of: "(", with: "").replacingOccurrences(of: ")", with: "")
     }
     
     
@@ -51,13 +53,19 @@ class ContactImporter: NSObject {
         var phoneNumbers = [String:PhoneNumber]()
         
         do {
-            let request = NSFetchRequest(entityName: "Contact")
+            let request: NSFetchRequest<Contact>
+          
+                request = Contact.fetchRequest() as! NSFetchRequest<Contact>
+            //} else {
+              //  request = NSFetchRequest(entityName: "Contact")
+            //}
+            //request: NSFetchRequest<Animal> = Animal.fetchRequest
             request.relationshipKeyPathsForPrefetching = ["phoneNumbers"]
-            if let contactsResult = try self.context.executeFetchRequest(request) as? [Contact] {
+            if let contactsResult = try self.context.fetch(request) as? [Contact] {
                 for contact in contactsResult {
                     contacts[contact.contactId!] = contact
                     for phoneNumber in contact.phoneNumbers! {
-                        phoneNumbers[phoneNumber.value] = phoneNumber as? PhoneNumber
+                        phoneNumbers[(phoneNumber as AnyObject).value] = phoneNumber as? PhoneNumber
                     }
                 }
             }
@@ -69,36 +77,39 @@ class ContactImporter: NSObject {
 
     func fetch() {
         let store = CNContactStore()
-        store.requestAccessForEntityType(.Contacts, completionHandler: {
+        store.requestAccess(for: .contacts, completionHandler: {
             granted, error in
             
-            self.context.performBlock {
+            self.context.perform {
                 if granted {
                     do {
                         let (contacts, phoneNumbers) = self.fetchExisting()
-                        let req = CNContactFetchRequest(keysToFetch: [CNContactGivenNameKey, CNContactFamilyNameKey, CNContactPhoneNumbersKey])
+                        let req = CNContactFetchRequest(keysToFetch: [CNContactGivenNameKey as CNKeyDescriptor, CNContactFamilyNameKey as CNKeyDescriptor, CNContactPhoneNumbersKey as CNKeyDescriptor])
                         
-                        try store.enumerateContactsWithFetchRequest(req, usingBlock: {cnContact, stop in
+                        try store.enumerateContacts(with: req, usingBlock: {cnContact, stop in
                             
-                            guard let contact = contacts[cnContact.identifier] ??  NSEntityDescription.insertNewObjectForEntityForName("Contact", inManagedObjectContext: self.context) as? Contact else {return}
+                            guard let contact = contacts[cnContact.identifier] ??  NSEntityDescription.insertNewObject(forEntityName: "Contact", into: self.context) as? Contact else {return}
                             contact.firstName = cnContact.givenName
                             contact.lastName = cnContact.familyName
                             contact.contactId = cnContact.identifier
                             
                             for cnVal in cnContact.phoneNumbers {
-                                guard let cnPhoneNumber = cnVal.value as? CNPhoneNumber else {continue}
-                                guard let phoneNumber = phoneNumbers[cnPhoneNumber.stringValue] ??  NSEntityDescription.insertNewObjectForEntityForName("PhoneNumber", inManagedObjectContext: self.context) as? PhoneNumber else {continue}
-                                phoneNumber.kind = CNLabeledValue.localizedStringForLabel(cnVal.label)
+                                guard let cnPhoneNumber = cnVal.value as CNPhoneNumber? else {continue}
+                                guard let phoneNumber = phoneNumbers[cnPhoneNumber.stringValue] ??  NSEntityDescription.insertNewObject(forEntityName: "PhoneNumber", into: self.context) as? PhoneNumber else {continue}
+                                phoneNumber.kind = CNLabeledValue<NSString>.localizedString(forLabel: cnVal.label!) as String!
+                                //CNLabeledValue.localizedString(forLabel: cnVal.label!) as String?
+                                
+                                //let localizedLabel = CNLabeledValue<NSString>.localizedString(forLabel: phoneNumber.label!)
                                 phoneNumber.value = self.formatPhoneNumber(cnPhoneNumber)
                                 phoneNumber.contact = contact
                             }
-                            if contact.inserted {
+                            if contact.isInserted {
                                 contact.favorite = true
                             }
                         })
                         try self.context.save()
                     } catch let error as NSError {
-                        print(error)
+                        print("HERE IS THE ERROR!!!!!!!!\(error)")
                     } catch {
                         
                     }

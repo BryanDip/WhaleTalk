@@ -15,13 +15,13 @@ class NewGroupParticipantsViewController: UIViewController {
     var chat: Chat?
     var chatCreationDelegate: ChatCreationDelegate?
     
-    private var searchField: UITextField!
-    private var tableView = UITableView(frame: CGRectZero, style: .Plain)
-    private var cellIdentifier = "ContactCell"
-    private var displayedContacts = [Contact]()
-    private var allContacts = [Contact]()
-    private var selectedContacts = [Contact]()
-    private var isSearching = false
+    fileprivate var searchField: UITextField!
+    fileprivate var tableView = UITableView(frame: CGRect.zero, style: .plain)
+    fileprivate var cellIdentifier = "ContactCell"
+    fileprivate var displayedContacts = [Contact]()
+    fileprivate var allContacts = [Contact]()
+    fileprivate var selectedContacts = [Contact]()
+    fileprivate var isSearching = false
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -29,15 +29,15 @@ class NewGroupParticipantsViewController: UIViewController {
         
         title = "Add Participants"
         
-        navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Create", style: .Plain, target: self, action: "createChat")
+        navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Create", style: .plain, target: self, action: #selector(NewGroupParticipantsViewController.createChat))
         showCreateButton(false)
         
         automaticallyAdjustsScrollViewInsets = false
         
-        tableView.registerClass(UITableViewCell.self, forCellReuseIdentifier: cellIdentifier)
+        tableView.register(UITableViewCell.self, forCellReuseIdentifier: cellIdentifier)
         tableView.dataSource = self
         tableView.delegate = self
-        tableView.tableFooterView = UIView(frame: CGRectZero)
+        tableView.tableFooterView = UIView(frame: CGRect.zero)
         
         searchField = createSearchField()
         searchField.delegate = self
@@ -46,10 +46,10 @@ class NewGroupParticipantsViewController: UIViewController {
         fillViewWith(tableView)
         
         if let context = context {
-            let request = NSFetchRequest(entityName: "Contact")
+            let request: NSFetchRequest<NSFetchRequestResult> = Contact.fetchRequest()
             request.sortDescriptors = [NSSortDescriptor(key: "lastName", ascending: true), NSSortDescriptor(key: "firstName", ascending: true)]
             do {
-                if let result = try context.executeFetchRequest(request) as? [Contact] {
+                if let result = try context.fetch(request) as? [Contact] {
                     allContacts = result
                 }
                 } catch {
@@ -65,60 +65,60 @@ class NewGroupParticipantsViewController: UIViewController {
     }
     
     
-    private func createSearchField() -> UITextField {
+    fileprivate func createSearchField() -> UITextField {
         let searchField = UITextField(frame: CGRect(x: 0, y: 0, width: 0, height: 50))
         searchField.backgroundColor = UIColor(red: 220/255, green: 220/255, blue: 220/255, alpha: 1.0)
         searchField.placeholder = "Type contact name"
             
         let holderView = UIView(frame: CGRect(x: 0, y: 0, width: 50, height: 50))
         searchField.leftView = holderView
-        searchField.leftViewMode = .Always
+        searchField.leftViewMode = .always
             
-        let image = UIImage(named: "contact_icon")?.imageWithRenderingMode(.AlwaysTemplate)
+        let image = UIImage(named: "contact_icon")?.withRenderingMode(.alwaysTemplate)
             
         let contactImage = UIImageView(image: image)
-        contactImage.tintColor = UIColor.darkGrayColor()
+        contactImage.tintColor = UIColor.darkGray
             
         holderView.addSubview(contactImage)
         contactImage.translatesAutoresizingMaskIntoConstraints = false
         
         let constraints: [NSLayoutConstraint] = [
-        contactImage.widthAnchor.constraintEqualToAnchor(holderView.widthAnchor, constant: -20),
-        contactImage.heightAnchor.constraintEqualToAnchor(holderView.heightAnchor, constant: -20),
-        contactImage.centerXAnchor.constraintEqualToAnchor(holderView.centerXAnchor),
-        contactImage.centerYAnchor.constraintEqualToAnchor(holderView.centerYAnchor)
+        contactImage.widthAnchor.constraint(equalTo: holderView.widthAnchor, constant: -20),
+        contactImage.heightAnchor.constraint(equalTo: holderView.heightAnchor, constant: -20),
+        contactImage.centerXAnchor.constraint(equalTo: holderView.centerXAnchor),
+        contactImage.centerYAnchor.constraint(equalTo: holderView.centerYAnchor)
         ]
         
-        NSLayoutConstraint.activateConstraints(constraints)
+        NSLayoutConstraint.activate(constraints)
         
         return searchField
         
     }
     
     
-    private func showCreateButton(show: Bool) {
+    fileprivate func showCreateButton(_ show: Bool) {
         if show {
             navigationItem.rightBarButtonItem?.tintColor = view.tintColor
-            navigationItem.rightBarButtonItem?.enabled = true
+            navigationItem.rightBarButtonItem?.isEnabled = true
         } else {
-            navigationItem.rightBarButtonItem?.tintColor = UIColor.lightGrayColor()
-            navigationItem.rightBarButtonItem?.enabled = false
+            navigationItem.rightBarButtonItem?.tintColor = UIColor.lightGray
+            navigationItem.rightBarButtonItem?.isEnabled = false
         }
     }
     
     
-    private func endSearch() {
+    fileprivate func endSearch() {
         displayedContacts = selectedContacts
         tableView.reloadData()
     }
     
     
     func createChat() {
-        guard let chat = chat, context = context else {return}
+        guard let chat = chat, let context = context else {return}
         chat.participants = NSSet(array: selectedContacts)
         chatCreationDelegate?.created(chat: chat, inContext: context)
         
-        dismissViewControllerAnimated(false, completion: nil)
+        dismiss(animated: false, completion: nil)
     }
 
 }
@@ -127,16 +127,16 @@ class NewGroupParticipantsViewController: UIViewController {
 
 extension NewGroupParticipantsViewController: UITableViewDataSource {
     
-    func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return displayedContacts.count
     }
     
     
-    func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCellWithIdentifier(cellIdentifier, forIndexPath: indexPath)
-        let contact = displayedContacts[indexPath.row]
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: cellIdentifier, for: indexPath)
+        let contact = displayedContacts[(indexPath as NSIndexPath).row]
         cell.textLabel?.text = contact.fullName
-        cell.selectionStyle = .None
+        cell.selectionStyle = .none
         
         return cell
     }
@@ -146,14 +146,14 @@ extension NewGroupParticipantsViewController: UITableViewDataSource {
 
 extension NewGroupParticipantsViewController: UITableViewDelegate {
     
-    func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
         guard isSearching else {return}
         
-        let contact = displayedContacts[indexPath.row]
+        let contact = displayedContacts[(indexPath as NSIndexPath).row]
         guard !selectedContacts.contains(contact) else {return}
         selectedContacts.append(contact)
-        allContacts.removeAtIndex(allContacts.indexOf(contact)!)
+        allContacts.remove(at: allContacts.index(of: contact)!)
         searchField.text = ""
         endSearch()
         showCreateButton(true)
@@ -167,7 +167,7 @@ extension NewGroupParticipantsViewController: UITableViewDelegate {
 
 extension NewGroupParticipantsViewController: UITextFieldDelegate {
     
-    func textField(textField: UITextField, shouldChangeCharactersInRange range: NSRange, replacementString string: String) -> Bool {
+    func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
         
         isSearching = true
         
@@ -176,7 +176,7 @@ extension NewGroupParticipantsViewController: UITextFieldDelegate {
             return true
         }
         
-        let text = NSString(string: currentText).stringByReplacingCharactersInRange(range, withString: string)
+        let text = NSString(string: currentText).replacingCharacters(in: range, with: string)
         
         if text.characters.count == 0 {
             endSearch()
@@ -186,7 +186,7 @@ extension NewGroupParticipantsViewController: UITextFieldDelegate {
         displayedContacts = allContacts.filter {
             contact in
             
-            let match = contact.fullName.rangeOfString(text) != nil
+            let match = contact.fullName.range(of: text) != nil
             return match
         }
         

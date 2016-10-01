@@ -12,7 +12,7 @@ import CoreData
 class ContactsSearchResultsController: UITableViewController {
 
     
-    private var filteredContacts = [Contact]()
+    fileprivate var filteredContacts = [Contact]()
     
     var contactSelector: ContactSelector?
     
@@ -22,7 +22,7 @@ class ContactsSearchResultsController: UITableViewController {
         }
     }
     
-    private var cellIdentifier = "ContactsSearchCell"
+    fileprivate var cellIdentifier = "ContactsSearchCell"
     
     
     override func viewDidLoad() {
@@ -35,7 +35,7 @@ class ContactsSearchResultsController: UITableViewController {
         // self.navigationItem.rightBarButtonItem = self.editButtonItem()
         
         
-        tableView.registerClass(UITableViewCell.self, forCellReuseIdentifier: cellIdentifier)
+        tableView.register(UITableViewCell.self, forCellReuseIdentifier: cellIdentifier)
     }
 
     override func didReceiveMemoryWarning() {
@@ -52,23 +52,23 @@ class ContactsSearchResultsController: UITableViewController {
     }
 */
 
-    override func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return filteredContacts.count
         
     }
 
     
-    override func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCellWithIdentifier(cellIdentifier, forIndexPath: indexPath)
-        let contact = filteredContacts[indexPath.row]
+    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: cellIdentifier, for: indexPath)
+        let contact = filteredContacts[(indexPath as NSIndexPath).row]
         cell.textLabel?.text = contact.fullName
         return cell
     }
 
     
     
-    override func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
-        let contact = filteredContacts[indexPath.row]
+    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let contact = filteredContacts[(indexPath as NSIndexPath).row]
     
         contactSelector?.selectedContact(contact)
     }
@@ -109,25 +109,15 @@ class ContactsSearchResultsController: UITableViewController {
     }
     */
 
-    /*
-    // MARK: - Navigation
-
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
-        // Get the new view controller using segue.destinationViewController.
-        // Pass the selected object to the new view controller.
-    }
-    */
-
 }
 
 
 extension ContactsSearchResultsController: UISearchResultsUpdating {
     
-    func updateSearchResultsForSearchController(searchController: UISearchController) {
+    func updateSearchResults(for searchController: UISearchController) {
         guard let searchText = searchController.searchBar.text else {return}
         if searchText.characters.count > 0 {
-            filteredContacts = contacts.filter{$0.fullName.rangeOfString(searchText, options: .CaseInsensitiveSearch) != nil}
+            filteredContacts = contacts.filter{$0.fullName.range(of: searchText, options: .caseInsensitive) != nil}
         } else {
             filteredContacts = contacts
         }

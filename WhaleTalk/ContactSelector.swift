@@ -10,6 +10,6 @@ import Foundation
 
 protocol ContactSelector {
         
-    func selectedContact(contact: Contact)
+    func selectedContact(_ contact: Contact)
     
 }

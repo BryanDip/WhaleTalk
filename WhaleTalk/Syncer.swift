@@ -12,8 +12,8 @@ import CoreData
 
 class Syncer: NSObject {
 
-    private var mainContext: NSManagedObjectContext
-    private var backgroundContext: NSManagedObjectContext
+    fileprivate var mainContext: NSManagedObjectContext
+    fileprivate var backgroundContext: NSManagedObjectContext
     
     var remoteStore: RemoteStore?
     
@@ -22,47 +22,42 @@ class Syncer: NSObject {
         self.backgroundContext = backgroundContext
         super.init()
         
-        NSNotificationCenter.defaultCenter().addObserver(self, selector: Selector("mainContextSaved:"), name: NSManagedObjectContextDidSaveNotification, object: mainContext)
+        NotificationCenter.default.addObserver(self, selector: #selector(Syncer.mainContextSaved(_:)), name: NSNotification.Name.NSManagedObjectContextDidSave, object: mainContext)
         
-        NSNotificationCenter.defaultCenter().addObserver(self, selector: Selector("backgroundContextSaved:"), name: NSManagedObjectContextDidSaveNotification, object: backgroundContext)
+        NotificationCenter.default.addObserver(self, selector: #selector(Syncer.backgroundContextSaved(_:)), name: NSNotification.Name.NSManagedObjectContextDidSave, object: backgroundContext)
     }
     
     
-    func mainContextSaved(notification: NSNotification) {
-        backgroundContext.performBlock{
+    func mainContextSaved(_ notification: Notification) {
+        backgroundContext.perform{
+             let inserted = self.objectsForKey(NSInsertedObjectsKey, dictionary: notification.userInfo! as NSDictionary, context: self.backgroundContext)
+            let updated = self.objectsForKey(NSUpdatedObjectsKey, dictionary: notification.userInfo! as NSDictionary, context: self.backgroundContext)
+            let deleted = self.objectsForKey(NSDeletedObjectsKey, dictionary: notification.userInfo! as NSDictionary, context: self.backgroundContext)
             
-            let inserted = self.objectsForKey(NSInsertedObjectsKey, dictionary: notification.userInfo!, context: self.backgroundContext)
-            let updated = self.objectsForKey(NSUpdatedObjectsKey, dictionary: notification.userInfo!, context: self.backgroundContext)
-            let deleted = self.objectsForKey(NSDeletedObjectsKey, dictionary: notification.userInfo!, context: self.backgroundContext)
-            
-            self.backgroundContext.mergeChangesFromContextDidSaveNotification(notification)
+            self.backgroundContext.mergeChanges(fromContextDidSave: notification)
             
             self.remoteStore?.store(inserted, updated: updated, deleted: deleted)
         }
     }
     
     
-    func backgroundContextSaved(notification: NSNotification) {
-        mainContext.performBlock{
+    func backgroundContextSaved(_ notification: Notification) {
+        mainContext.perform{
             
-            self.objectsForKey(NSUpdatedObjectsKey, dictionary: notification.userInfo!, context: self.mainContext).forEach{$0.willAccessValueForKey(nil)}
-            self.mainContext.mergeChangesFromContextDidSaveNotification(notification)
+            //self.objectsForKey(NSUpdatedObjectsKey, dictionary: (notification as NSNotification).userInfo! as NSDictionary, context: self.mainContext).forEach{$0.willAccessValue(forKey: nil)}
+            self.mainContext.mergeChanges(fromContextDidSave: notification)
         }
     }
     
     
-    private func objectsForKey(key: String, dictionary: NSDictionary, context: NSManagedObjectContext) -> [NSManagedObject] {
+    fileprivate func objectsForKey(_ key: String, dictionary: NSDictionary, context: NSManagedObjectContext) -> [NSManagedObject] {
         guard let set = (dictionary[key] as? NSSet) else {return []}
         guard let objects = set.allObjects as? [NSManagedObject] else {return []}
-        return objects.map{context.objectWithID($0.objectID)}
+        return objects.map{context.object(with: $0.objectID)}
     }
+
     
 }
-
-
-
-
-
 
 
 
